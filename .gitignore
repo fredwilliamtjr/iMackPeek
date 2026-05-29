@@ -12,6 +12,9 @@ iMackPeek.xcodeproj/
 # Artefatos de distribuição (gerados por scripts/build_release.sh + create_dmg.sh)
 dist/
 
+# Briefing de planejamento interno — fica só local, não vai pro repo
+iMackPeek-Briefing.md
+
 # macOS
 .DS_Store
 
