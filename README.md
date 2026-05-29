@@ -16,6 +16,12 @@
 
 ---
 
+<p align="center">
+  <img src="docs/screenshot.png" width="640" alt="iMackPeek — janela de Backup com os apps detectados no Mac">
+</p>
+
+---
+
 ## 🧭 O problema
 
 O [Mackup](https://github.com/lra/mackup) é ótimo pra versionar as configurações dos seus apps (dotfiles, prefs, `.gitconfig`, settings do VS Code…) e sincronizá-las via iCloud, Dropbox ou disco. Mas é **CLI-only desde 2013** — a [issue pedindo uma GUI (#604)](https://github.com/lra/mackup/issues/604) está aberta sem implementação. Pra usar, você decora `mackup backup`, `mackup restore`, edita um `.mackup.cfg` na mão pra escolher o que sincronizar, e torce pra não estar mandando o `.ssh/` inteiro pra nuvem sem perceber.
