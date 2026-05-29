@@ -1,0 +1,23 @@
+# Xcode / build
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+
+# Projeto gerado pelo XcodeGen — recriado com `xcodegen generate`
+iMackPeek.xcodeproj/
+
+# Artefatos de distribuição (gerados por scripts/build_release.sh + create_dmg.sh)
+dist/
+
+# macOS
+.DS_Store
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Caches do próprio iMackPeek (em ~/Library, mas por segurança)
+show-cache.json

@@ -1,0 +1,11 @@
+[
+  ".ssh/",
+  ".aws/",
+  ".gnupg/",
+  ".codex/auth.json",
+  ".kube/config",
+  ".docker/config.json",
+  ".netrc",
+  "Library/Application Support/Code/User/secrets/",
+  "Library/Keychains/"
+]
