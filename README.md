@@ -9,7 +9,7 @@
   <p>
     <img src="https://img.shields.io/badge/macOS-13.0%2B-000000?style=flat-square&logo=apple&logoColor=white" alt="macOS 13+">
     <img src="https://img.shields.io/badge/Swift-5.0-F05138?style=flat-square&logo=swift&logoColor=white" alt="Swift 5.0">
-    <img src="https://img.shields.io/badge/Apple%20Silicon-arm64-555555?style=flat-square" alt="Apple Silicon">
+    <img src="https://img.shields.io/badge/Universal-arm64%20%2B%20Intel-555555?style=flat-square" alt="Universal: Apple Silicon + Intel">
     <img src="https://img.shields.io/badge/status-alpha-orange?style=flat-square" alt="alpha">
   </p>
 </div>
