@@ -13,6 +13,7 @@ struct InstallMackupView: View {
     @State private var installError: String?
 
     private var hasBrew: Bool { environment.brewPath != nil }
+    private var hasCLT: Bool { HomebrewDetector.commandLineToolsInstalled() }
 
     var body: some View {
         VStack(spacing: 20) {
@@ -85,8 +86,15 @@ struct InstallMackupView: View {
         }
     }
 
-    private static let brewInstallCommand =
-        #"/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)""#
+    /// Instala Homebrew e, na mesma sessão do Terminal, o Mackup — resolvendo o
+    /// PATH do brew (que difere entre Apple Silicon e Intel) via `shellenv`.
+    /// O instalador do Homebrew instala as Command Line Tools se faltarem.
+    private static let bootstrapCommand = [
+        #"/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)""#,
+        #"eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)""#,
+        "brew install mackup",
+        #"echo; echo '✅ Pronto — volte ao iMackPeek e clique em Verificar novamente.'"#,
+    ].joined(separator: " && ")
 
     @ViewBuilder
     private var noBrewSection: some View {
@@ -96,16 +104,27 @@ struct InstallMackupView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
+            // Mostra a cadeia real de dependências numa máquina nova.
+            VStack(alignment: .leading, spacing: 6) {
+                chainStep(done: hasCLT, label: "Command Line Tools da Apple",
+                          detail: hasCLT ? "já instaladas" : "o instalador do Homebrew cuida disso")
+                chainStep(done: false, label: "Homebrew", detail: "gerenciador de pacotes")
+                chainStep(done: false, label: "Mackup", detail: "via brew install mackup")
+            }
+            .frame(maxWidth: 320, alignment: .leading)
+            .padding(10)
+            .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
+
             Button {
-                TerminalLauncher.run(Self.brewInstallCommand)
+                TerminalLauncher.run(Self.bootstrapCommand)
             } label: {
-                Label("Instalar Homebrew no Terminal", systemImage: "terminal.fill")
+                Label("Instalar tudo no Terminal", systemImage: "terminal.fill")
                     .frame(maxWidth: 260)
             }
             .controlSize(.large)
             .buttonStyle(.borderedProminent)
 
-            Text("Abre o Terminal e roda o instalador oficial (pede sua senha). "
+            Text("Abre o Terminal e instala Homebrew + Mackup de uma vez (pede sua senha). "
                  + "Ao terminar, volte aqui e clique em “Verificar novamente”.")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
@@ -115,6 +134,16 @@ struct InstallMackupView: View {
                 .font(.caption)
         }
         .frame(maxWidth: 460)
+    }
+
+    @ViewBuilder
+    private func chainStep(done: Bool, label: String, detail: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: done ? "checkmark.circle.fill" : "circle")
+                .foregroundStyle(done ? .green : .secondary)
+            Text(label).font(.callout.weight(.medium))
+            Text("— \(detail)").font(.caption).foregroundStyle(.secondary)
+        }
     }
 
     private func installViaBrew() async {
@@ -127,6 +156,7 @@ struct InstallMackupView: View {
         do {
             let result = try await Shell.runAsync(brew, ["install", "mackup"])
             installLog = [result.stdout, result.stderr]
+                .map { $0.strippingANSI() }
                 .filter { !$0.isEmpty }
                 .joined(separator: "\n")
             if !result.succeeded {

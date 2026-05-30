@@ -113,7 +113,7 @@ final class RestoreViewModel: ObservableObject {
 
             let result = try await cli.restore(configPath: configURL, dryRun: dryRun)
             var text = [result.stdout, result.stderr]
-                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .map { $0.strippingANSI().trimmingCharacters(in: .whitespacesAndNewlines) }
                 .filter { !$0.isEmpty }
                 .joined(separator: "\n")
 

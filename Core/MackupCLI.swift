@@ -14,7 +14,7 @@ enum MackupError: Error, LocalizedError {
             return "Saída inesperada do Mackup: \(detail)"
         case .commandFailed(let args, let code, let stderr):
             let cmd = (["mackup"] + args).joined(separator: " ")
-            let tail = stderr.trimmingCharacters(in: .whitespacesAndNewlines)
+            let tail = stderr.strippingANSI().trimmingCharacters(in: .whitespacesAndNewlines)
             return "Comando falhou (exit \(code)): \(cmd)\n\(tail)"
         }
     }
@@ -22,18 +22,53 @@ enum MackupError: Error, LocalizedError {
 
 /// Wrapper de alto nível sobre o CLI do Mackup.
 ///
-/// Nunca toca no `~/.mackup.cfg` do usuário: comandos que dependem de config
-/// (backup/restore) sempre receberão `-c <arquivo temporário>` nas fases
-/// seguintes. Nesta fase expomos apenas `version()` e `list()`, que não
-/// dependem de configuração.
+/// Nunca toca no `~/.mackup.cfg` do usuário. Todo comando que precisa de um
+/// storage engine recebe `-c <arquivo temporário>`: `backup`/`restore` usam o
+/// config gerado a partir da seleção; `list`/`show` usam um config **neutro**
+/// (engine local) — ver `neutralConfig()` — para funcionarem mesmo numa
+/// máquina virgem, sem `~/.mackup.cfg`. Só `version()` dispensa config.
 final class MackupCLI {
 
     let executablePath: String
     /// Cache opcional da saída de `show` (configurado após descobrir a versão).
     private var showCache: ShowCache?
+    /// Config neutro (engine local) reutilizado por `list`/`show`. Ver `neutralConfig()`.
+    private var neutralConfigURL: URL?
 
     init(executablePath: String) {
         self.executablePath = executablePath
+    }
+
+    /// Devolve (criando uma vez) um `.mackup.cfg` **neutro** usado só por
+    /// `list`/`show`, que não dependem de storage real.
+    ///
+    /// Por quê: o Mackup 0.10.3 exige um storage engine resolvível **até em
+    /// `list`** — sem `~/.mackup.cfg` ele assume o default (Dropbox) e aborta
+    /// com "Unable to find your Dropbox install" numa máquina virgem. Usamos o
+    /// engine `file_system` apontando para uma pasta oculta que garantimos
+    /// existir, então `list`/`show` funcionam mesmo antes de o usuário
+    /// configurar o storage de verdade. Nunca tocamos no `~/.mackup.cfg` dele.
+    private func neutralConfig() throws -> URL {
+        if let neutralConfigURL { return neutralConfigURL }
+        let fm = FileManager.default
+        let home = fm.homeDirectoryForCurrentUser
+        // Pasta de storage do engine file_system (path é relativo ao HOME).
+        let storageDir = home.appendingPathComponent(".imackpeek-neutral")
+        try fm.createDirectory(at: storageDir, withIntermediateDirectories: true)
+        // O Mackup recusa `-c` fora do HOME, então o cfg também fica no home.
+        let cfg = home.appendingPathComponent(".imackpeek-neutral.cfg")
+        let text = """
+        # Config neutro do iMackPeek (list/show) — não reflete o storage do usuário.
+        [storage]
+        engine = file_system
+        path = .imackpeek-neutral
+
+        [mode]
+        mode = copy
+        """
+        try text.write(to: cfg, atomically: true, encoding: .utf8)
+        neutralConfigURL = cfg
+        return cfg
     }
 
     /// Liga o cache de `show`, atrelado à versão do Mackup.
@@ -71,7 +106,8 @@ final class MackupCLI {
 
     /// Lista os slugs de todos os apps suportados (ex.: "git", "vim").
     func list() async throws -> [String] {
-        let result = try await execute(["list"])
+        let cfg = try neutralConfig()
+        let result = try await execute(["-c", cfg.path, "list"])
         return MackupParser.parseList(result.stdout)
     }
 
@@ -81,7 +117,8 @@ final class MackupCLI {
         if let cached = await showCache?.result(for: slug) {
             return cached
         }
-        let result = try await execute(["show", slug])
+        let cfg = try neutralConfig()
+        let result = try await execute(["-c", cfg.path, "show", slug])
         let parsed = MackupParser.parseShow(result.stdout, fallbackName: slug)
         await showCache?.store(parsed, for: slug)
         return parsed

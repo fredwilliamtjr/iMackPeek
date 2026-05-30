@@ -30,6 +30,76 @@ struct MackupConfig: Equatable {
         return parse(text)
     }
 
+    /// `true` se o `~/.mackup.cfg` do usuário já existe.
+    static var userConfigExists: Bool {
+        FileManager.default.fileExists(atPath: userConfigURL.path)
+    }
+
+    enum WriteError: Error, LocalizedError {
+        case alreadyExists
+        var errorDescription: String? {
+            switch self {
+            case .alreadyExists:
+                return "Já existe um ~/.mackup.cfg — o iMackPeek não sobrescreve a config do usuário."
+            }
+        }
+    }
+
+    /// Cria o `~/.mackup.cfg` do usuário na **primeira execução** (seção 5.1 do
+    /// briefing) — única situação em que o iMackPeek escreve esse arquivo, e só
+    /// após confirmação explícita na UI.
+    ///
+    /// Recusa-se a sobrescrever um arquivo existente. Para `file_system`, grava
+    /// `path = <localFolderName>` (relativo ao HOME) e cria a pasta.
+    static func writeUserConfig(engine: StorageEngine, localFolderName: String? = nil) throws {
+        guard !userConfigExists else { throw WriteError.alreadyExists }
+
+        var lines = ["# Criado pelo iMackPeek.", "", "[storage]", "engine = \(engine.rawValue)"]
+        if engine == .fileSystem {
+            let folder = (localFolderName?.isEmpty == false ? localFolderName! : "Mackup")
+            lines.append("path = \(folder)")
+            let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(folder)
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        }
+        lines.append(contentsOf: ["", "[mode]", "mode = copy", ""])
+
+        try lines.joined(separator: "\n").write(to: userConfigURL, atomically: true, encoding: .utf8)
+    }
+
+    /// Engines de storage suportados pelo Mackup que o iMackPeek oferece no
+    /// onboarding. Os `rawValue` batem exatamente com o que o Mackup espera.
+    enum StorageEngine: String, CaseIterable, Identifiable {
+        case icloud
+        case dropbox
+        case googleDrive = "google_drive"
+        case fileSystem = "file_system"
+
+        var id: String { rawValue }
+
+        var displayName: String {
+            switch self {
+            case .icloud: return "iCloud Drive"
+            case .dropbox: return "Dropbox"
+            case .googleDrive: return "Google Drive"
+            case .fileSystem: return "Pasta local"
+            }
+        }
+
+        var systemImage: String {
+            switch self {
+            case .icloud: return "icloud"
+            case .dropbox: return "shippingbox"
+            case .googleDrive: return "externaldrive.badge.icloud"
+            case .fileSystem: return "folder"
+            }
+        }
+
+        /// Exige um app/serviço externo instalado pra funcionar.
+        var requiresExternalApp: Bool {
+            self == .dropbox || self == .googleDrive
+        }
+    }
+
     /// Parser tolerante de INI: reconhece `[secao]` e `chave = valor`,
     /// ignora comentários (`#`, `;`) e espaços.
     static func parse(_ text: String) -> MackupConfig {

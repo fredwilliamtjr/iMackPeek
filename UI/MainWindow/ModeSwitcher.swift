@@ -44,8 +44,9 @@ struct ContentRootView: View {
         VStack(spacing: 0) {
             HStack {
                 ModeSwitcher(mode: $app.mode)
+                    .disabled(!environment.hasUserConfig)
                 Spacer()
-                Text("Mackup \(versionText) • \(environment.userConfig.effectiveEngine)")
+                Text("Mackup \(versionText) • \(storageLabel)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -54,15 +55,25 @@ struct ContentRootView: View {
 
             Divider()
 
-            switch app.mode {
-            case .backup:
-                BackupModeView(model: app.backup)
-            case .restore:
-                RestoreModeView(model: app.restore)
-            case .profiles:
-                ProfilesView()
+            if environment.hasUserConfig {
+                switch app.mode {
+                case .backup:
+                    BackupModeView(model: app.backup)
+                case .restore:
+                    RestoreModeView(model: app.restore)
+                case .profiles:
+                    ProfilesView()
+                }
+            } else {
+                // Primeira execução sem ~/.mackup.cfg: configura o storage antes
+                // de liberar backup/restore (que dependem de um engine real).
+                StorageSetupView()
             }
         }
+    }
+
+    private var storageLabel: String {
+        environment.hasUserConfig ? environment.userConfig.effectiveEngine : "não configurado"
     }
 
     private var versionText: String {
