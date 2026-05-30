@@ -28,6 +28,15 @@ enum HomebrewDetector {
         firstExecutable(in: brewCandidates)
     }
 
+    /// `true` se as *Command Line Tools* da Apple (ou o Xcode) estão presentes.
+    /// O instalador do Homebrew depende delas; numa máquina nova elas faltam.
+    /// (O instalador do brew sabe instalá-las, mas avisamos o usuário antes.)
+    static func commandLineToolsInstalled() -> Bool {
+        let fm = FileManager.default
+        return fm.fileExists(atPath: "/Library/Developer/CommandLineTools/usr/bin/git")
+            || fm.fileExists(atPath: "/Applications/Xcode.app")
+    }
+
     private static func firstExecutable(in candidates: [String]) -> String? {
         candidates.first { FileManager.default.isExecutableFile(atPath: $0) }
     }

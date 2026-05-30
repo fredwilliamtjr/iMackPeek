@@ -28,6 +28,13 @@ final class MackupEnvironment: ObservableObject {
     /// Config do usuário lida em modo somente-leitura (storage engine, modo).
     @Published private(set) var userConfig = MackupConfig()
 
+    /// `true` quando o `~/.mackup.cfg` existe. Quando `false`, a UI mostra o
+    /// onboarding de storage (backup/restore precisam de um storage real).
+    @Published private(set) var hasUserConfig = false
+
+    /// Mensagem de erro do onboarding de storage, se houver.
+    @Published var configError: String?
+
     /// Wrapper do CLI, disponível quando o Mackup foi localizado.
     private(set) var cli: MackupCLI?
 
@@ -48,6 +55,7 @@ final class MackupEnvironment: ObservableObject {
         self.cli = cli
         mackupPath = cli.executablePath
         userConfig = MackupConfig.loadUserConfig() ?? MackupConfig()
+        hasUserConfig = MackupConfig.userConfigExists
         Log.app.notice("mackup localizado em \(cli.executablePath, privacy: .public)")
 
         do {
@@ -60,6 +68,21 @@ final class MackupEnvironment: ObservableObject {
             supportedApps = []
             status = .failed(error.localizedDescription)
             Log.app.error("smoke test falhou: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// Cria o `~/.mackup.cfg` na primeira execução (onboarding), com o engine
+    /// escolhido pelo usuário, e recarrega o ambiente. Único ponto em que o app
+    /// escreve esse arquivo — sempre após confirmação explícita na UI.
+    func createUserConfig(engine: MackupConfig.StorageEngine) async {
+        configError = nil
+        do {
+            try MackupConfig.writeUserConfig(engine: engine)
+            Log.app.notice("~/.mackup.cfg criado (engine \(engine.rawValue, privacy: .public))")
+            await refresh()
+        } catch {
+            configError = error.localizedDescription
+            Log.app.error("falha ao criar ~/.mackup.cfg: \(error.localizedDescription, privacy: .public)")
         }
     }
 }

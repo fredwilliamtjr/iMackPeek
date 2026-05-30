@@ -128,7 +128,7 @@ final class BackupViewModel: ObservableObject {
 
             let result = try await cli.backup(configPath: configURL, dryRun: dryRun)
             let text = [result.stdout, result.stderr]
-                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .map { $0.strippingANSI().trimmingCharacters(in: .whitespacesAndNewlines) }
                 .filter { !$0.isEmpty }
                 .joined(separator: "\n")
             actionOutput = ActionOutput(
