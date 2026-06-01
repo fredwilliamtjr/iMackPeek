@@ -82,12 +82,66 @@ enum SystemPrefsCatalog {
             }
             // --- domínio global: "mostrar todas as extensões de arquivo" ---
             k.append(PrefKey(G, "AppleShowAllExtensions"))
+            // --- pastas com mola (abrir pasta ao arrastar por cima) ---
+            k.append(PrefKey(G, "com.apple.springing.enabled"))
+            k.append(PrefKey(G, "com.apple.springing.delay"))
+            // --- ocultar ícones da Mesa (macOS Sonoma+); domínio WindowManager ---
+            k.append(PrefKey("com.apple.WindowManager", "StandardHideDesktopIcons"))
+            // --- servidores salvos em "Conectar ao servidor" ---
+            for key in ["CustomListItems", "recentservers"] {
+                k.append(PrefKey("com.apple.NetworkBrowser", key))
+            }
             return k
         }(),
-        daemons: ["Finder"]
+        daemons: ["Finder", "WindowManager"]
     )
 
     static func recipe(id: String) -> SyncRecipe? { recipes.first { $0.id == id } }
+
+    /// Descrição legível, por grupo, do que a aba Finder sincroniza — para o
+    /// informativo "O que é sincronizado?". Mantenha em sincronia com `finder.keys`.
+    static let finderInfoGroups: [SyncInfoGroup] = [
+        SyncInfoGroup(title: "Barras e visualização", icon: "sidebar.left", items: [
+            "Estilo de visualização padrão (lista, ícone, coluna, galeria)",
+            "Barra de caminho, de status, lateral e de abas",
+            "Barra de ferramentas (quais botões aparecem no topo)",
+        ]),
+        SyncInfoGroup(title: "Mesa (Desktop)", icon: "menubar.dock.rectangle", items: [
+            "Mostrar na Mesa: discos internos, externos, mídia removível e servidores",
+            "Ocultar todos os ícones da Mesa",
+            "Manter pastas no topo na Mesa",
+        ]),
+        SyncInfoGroup(title: "Janelas e navegação", icon: "macwindow.on.rectangle", items: [
+            "Pasta que abre em uma nova janela",
+            "Abrir pastas em abas em vez de novas janelas",
+            "Pastas com mola (abrir ao arrastar um item por cima) e seu atraso",
+        ]),
+        SyncInfoGroup(title: "Avançado", icon: "gearshape", items: [
+            "Mostrar arquivos ocultos e todas as extensões",
+            "Avisos: trocar extensão, remover do iCloud Drive, esvaziar o lixo",
+            "Esvaziar o lixo após 30 dias",
+            "Manter pastas no topo e escopo padrão da busca",
+        ]),
+        SyncInfoGroup(title: "Opções de visualização", icon: "square.grid.2x2", items: [
+            "Tamanho dos ícones, espaçamento da grade, colunas da lista e agrupamento",
+            "Aplicado a: Mesa, janelas padrão, Lixo, Rede, iCloud e pacotes",
+        ]),
+        SyncInfoGroup(title: "Barra lateral e etiquetas", icon: "tag", items: [
+            "Largura da barra lateral e seções abertas/fechadas",
+            "Etiquetas favoritas, etiquetas recentes e largura da coluna de etiquetas",
+        ]),
+        SyncInfoGroup(title: "Rede", icon: "network", items: [
+            "Servidores salvos e recentes em “Conectar ao servidor”",
+        ]),
+    ]
+}
+
+/// Um grupo de itens legíveis para o informativo "O que é sincronizado?".
+struct SyncInfoGroup: Identifiable {
+    let id = UUID()
+    let title: String
+    let icon: String
+    let items: [String]
 }
 
 /// Lê e grava as preferências curadas direto do macOS via `CFPreferences`.
@@ -146,6 +200,15 @@ struct SystemPrefsSync {
             at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         try data.write(to: fileURL, options: .atomic)
         return fileURL
+    }
+
+    /// Remove o snapshot salvo na nuvem (NÃO mexe nas configs locais do Mac).
+    /// Retorna `true` se havia um arquivo e ele foi removido.
+    @discardableResult
+    func deleteSnapshot() throws -> Bool {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else { return false }
+        try FileManager.default.removeItem(at: fileURL)
+        return true
     }
 
     // MARK: - Leitura / aplicação (restore)

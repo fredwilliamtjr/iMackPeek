@@ -65,6 +65,25 @@ final class FinderSyncViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Excluir sincronização da nuvem
+
+    func deleteSync() async {
+        guard let sync else { return }
+        isRunning = true; defer { isRunning = false }
+        do {
+            let removed = try sync.deleteSnapshot()
+            refreshCloudInfo()
+            output = ActionOutput(
+                title: removed ? "Sincronização excluída" : "Nada para excluir",
+                text: removed
+                    ? "O arquivo de configurações do Finder foi removido da nuvem.\n\nSuas configurações locais do Finder NÃO foram alteradas — só apaguei a cópia salva. Você pode clicar em “Salvar” de novo quando quiser."
+                    : "Não havia configurações salvas na nuvem.",
+                succeeded: true)
+        } catch {
+            output = ActionOutput(title: "Falha ao excluir", text: error.localizedDescription, succeeded: false)
+        }
+    }
+
     // MARK: - Aplicar (restore)
 
     func apply() async {
@@ -82,9 +101,12 @@ final class FinderSyncViewModel: ObservableObject {
         // 1) grava todas as configs via CFPreferences
         let applied = sync.apply(snap, recipe: recipe)
 
-        // 2) força o Finder a reler
+        // 2) força os daemons a relerem (cfprefsd = cache; Finder e
+        //    WindowManager = quem desenha janelas e a Mesa)
         _ = try? await Shell.runAsync("/usr/bin/killall", ["cfprefsd"])
-        _ = try? await Shell.runAsync("/usr/bin/killall", ["Finder"])
+        for daemon in recipe.daemons {
+            _ = try? await Shell.runAsync("/usr/bin/killall", [daemon])
+        }
         try? await Task.sleep(nanoseconds: 800_000_000)
 
         // 3) aplica as barras vivas via AppleScript
