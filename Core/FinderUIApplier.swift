@@ -16,8 +16,9 @@ enum FinderUIApplier {
         let pathbar: Bool?
         let statusbar: Bool?
         let sidebar: Bool?
+        let tabbar: Bool?
 
-        var isEmpty: Bool { pathbar == nil && statusbar == nil && sidebar == nil }
+        var isEmpty: Bool { pathbar == nil && statusbar == nil && sidebar == nil && tabbar == nil }
     }
 
     /// Extrai os estados desejados do snapshot do domínio `com.apple.finder`.
@@ -28,7 +29,8 @@ enum FinderUIApplier {
         }
         return Desired(pathbar: b("ShowPathbar"),
                        statusbar: b("ShowStatusBar"),
-                       sidebar: b("ShowSidebar"))
+                       sidebar: b("ShowSidebar"),
+                       tabbar: b("NSWindowTabbingShoudShowTabBarKey-com.apple.finder.TBrowserWindow"))
     }
 
     /// Resultado da aplicação: `ok` ou bloqueio por falta de Acessibilidade.
@@ -79,6 +81,10 @@ enum FinderUIApplier {
         }
         if let sd = d.sidebar {
             lines.append(menuToggleSubroutineCall(keywords: ["Lateral", "Sidebar"], wantVisible: sd))
+        }
+        if let tb = d.tabbar {
+            // "Barra de Abas" (não confundir com "Mostrar Todas as Abas")
+            lines.append(menuToggleSubroutineCall(keywords: ["Barra de Abas", "Tab Bar"], wantVisible: tb))
         }
         lines.append("return \"ok\"")
         return lines.joined(separator: "\n") + "\n" + menuToggleHandler

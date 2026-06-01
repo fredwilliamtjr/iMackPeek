@@ -45,7 +45,10 @@ enum SystemPrefsCatalog {
             let G = UserDefaults.globalDomain  // "NSGlobalDomain"
             var k: [PrefKey] = []
             // --- barras + visualização (também aplicadas ao vivo via AppleScript) ---
-            for key in ["FXPreferredViewStyle", "ShowPathbar", "ShowStatusBar", "ShowSidebar"] {
+            for key in ["FXPreferredViewStyle", "ShowPathbar", "ShowStatusBar", "ShowSidebar",
+                        // barra de abas do Finder (chave do AppKit window tabbing; o
+                        // nome tem o typo "Shoud" mesmo, vem assim do macOS)
+                        "NSWindowTabbingShoudShowTabBarKey-com.apple.finder.TBrowserWindow"] {
                 k.append(PrefKey(F, key))
             }
             // --- personalização da barra de ferramentas do Finder (botões do topo) ---
