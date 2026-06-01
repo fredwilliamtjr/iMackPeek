@@ -30,5 +30,7 @@
 	<string>public.app-category.utilities</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>O iMackPeek aciona o Finder para aplicar as configurações sincronizadas (visualização e barras).</string>
 </dict>
 </plist>

@@ -37,7 +37,7 @@ enum Shell {
 
     /// Executa `executable` com `arguments` e devolve o resultado completo.
     /// Lê stdout/stderr até o fim antes de aguardar o término, evitando
-    /// deadlock quando a saída é grande (ex.: `mackup list` com 600+ linhas).
+    /// deadlock quando a saída é grande.
     static func run(
         _ executable: String,
         _ arguments: [String] = [],

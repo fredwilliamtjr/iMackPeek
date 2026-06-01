@@ -6,26 +6,12 @@ struct iMackPeekApp: App {
     @StateObject private var app = AppModel.shared
 
     var body: some Scene {
-        WindowGroup(id: iMackPeekApp.mainWindowID) {
-            MainWindowView()
-                .environmentObject(app)
-                .environmentObject(app.environment)
-                .frame(minWidth: 760, minHeight: 520)
-                .task { await app.bootstrap() }
-        }
-        .windowResizability(.contentMinSize)
-        .commands {
-            CommandGroup(replacing: .newItem) {}  // sem "New Window"
-        }
-
-        // Ícone na barra de menus do macOS (estilo iCloudPeek / NetPeek):
-        // mesmo glyph do ícone do app, renderizado como template (monocromático),
-        // como manda a convenção da menu bar.
+        // App de barra de menus puro: nenhuma janela é aberta no launch (início
+        // silencioso). A janela principal é criada sob demanda pelo
+        // WindowManager quando o usuário escolhe "Abrir iMackPeek".
         MenuBarExtra("iMackPeek", systemImage: "doc.text.magnifyingglass") {
             MenuBarContent()
                 .environmentObject(app)
         }
     }
-
-    static let mainWindowID = "imackpeek-main"
 }

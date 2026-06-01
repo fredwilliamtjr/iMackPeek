@@ -6,7 +6,6 @@ import os
 enum Log {
     private static let subsystem = "com.smartfull.imackpeek"
 
-    static let cli = Logger(subsystem: subsystem, category: "MackupCLI")
     static let shell = Logger(subsystem: subsystem, category: "Shell")
     static let ui = Logger(subsystem: subsystem, category: "UI")
     static let app = Logger(subsystem: subsystem, category: "App")

@@ -13,10 +13,11 @@ if [[ ! -d "$PROJECT" ]]; then
     xcodegen generate
 fi
 
-echo "→ compilando Release"
+echo "→ compilando Release UNIVERSAL (arm64 + x86_64)"
 DERIVED="$(mktemp -d)"
 xcodebuild -project "$PROJECT" -scheme "$APP_NAME" -configuration Release \
-    -destination 'platform=macOS' -derivedDataPath "$DERIVED" \
+    -destination 'generic/platform=macOS' -derivedDataPath "$DERIVED" \
+    ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
     build >/dev/null
 
 BUILT_APP="$DERIVED/Build/Products/Release/${APP_NAME}.app"
@@ -30,5 +31,8 @@ mkdir -p dist
 rm -rf "dist/${APP_NAME}.app"
 cp -R "$BUILT_APP" "dist/${APP_NAME}.app"
 rm -rf "$DERIVED"
+
+echo "→ verificando arquiteturas"
+lipo -archs "dist/${APP_NAME}.app/Contents/MacOS/${APP_NAME}"
 
 echo "✓ dist/${APP_NAME}.app"

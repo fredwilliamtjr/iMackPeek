@@ -8,8 +8,8 @@ options:
 
 settings:
   base:
-    MARKETING_VERSION: "0.1.1"
-    CURRENT_PROJECT_VERSION: "2"
+    MARKETING_VERSION: "0.2.0"
+    CURRENT_PROJECT_VERSION: "3"
     SWIFT_VERSION: "5.0"
     DEVELOPMENT_LANGUAGE: pt-BR
 
@@ -31,8 +31,8 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         MACOSX_DEPLOYMENT_TARGET: "13.0"
         # Dev: assinatura ad-hoc, sem hardened runtime e sem sandbox.
-        # iMackPeek precisa executar o binário `mackup` via Process, o que é
-        # incompatível com o App Sandbox. Distribuição final usa Developer ID.
+        # iMackPeek aciona o Finder (AppleScript/System Events) e roda binários
+        # via Process — incompatível com o App Sandbox. Final usa Developer ID.
         CODE_SIGN_IDENTITY: "-"
         CODE_SIGN_STYLE: Automatic
         ENABLE_HARDENED_RUNTIME: NO

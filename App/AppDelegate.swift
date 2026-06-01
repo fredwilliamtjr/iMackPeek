@@ -1,20 +1,17 @@
 import AppKit
 
 /// Delegate da aplicação.
-///
-/// Hoje cuida apenas do comportamento básico de janela. O `NSStatusItem`
-/// (atalhos rápidos no menu bar) entra na Fase 4 — ver seção 4.3 do briefing.
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Menu bar app (estilo iCloudPeek / iNetPeek): sem ícone no Dock,
-        // vive na barra de menus. A janela é aberta pelo MenuBarExtra.
-        NSApp.setActivationPolicy(.accessory)
+        // App de barra de menus: o estado inicial "acessório" (sem Dock) vem do
+        // LSUIElement no Info.plist. Não há janela no launch (início silencioso)
+        // — ela é criada sob demanda pelo WindowManager. A presença no Dock é
+        // dinâmica: aparece com a janela aberta, some quando fecha.
         Log.app.notice("iMackPeek iniciado")
     }
 
-    /// Mantém o app vivo na menu bar mesmo sem janelas abertas — o ícone na
-    /// barra continua disponível para reabrir ou usar atalhos de perfil.
+    /// Mantém o app vivo na barra de menus mesmo sem janelas abertas.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
     }
