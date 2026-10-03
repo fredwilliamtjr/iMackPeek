@@ -3,8 +3,8 @@
 
   <h1>iMackPeek</h1>
 
-  <p><strong>Uma interface visual pro <a href="https://github.com/lra/mackup">Mackup</a> — backup e restore das configurações dos seus apps no macOS.</strong></p>
-  <p>Veja quais apps têm config no seu Mac, marque o que quer salvar e mande backup ou restore. Sem decorar comando, sem editar <code>.cfg</code> na mão.</p>
+  <p><strong>Leve as configurações do Finder de um Mac para o outro — pelo iCloud Drive, Google Drive ou OneDrive.</strong></p>
+  <p>Ajustou o Finder do jeito que gosta num Mac? Clique em <em>Salvar</em> nele e em <em>Aplicar</em> no outro. Barras, visualização, Mesa, avisos, barra lateral e etiquetas chegam iguais.</p>
 
   <p>
     <img src="https://img.shields.io/badge/macOS-13.0%2B-000000?style=flat-square&logo=apple&logoColor=white" alt="macOS 13+">
@@ -17,32 +17,42 @@
 ---
 
 <p align="center">
-  <img src="docs/screenshot.png" width="640" alt="iMackPeek — janela de Backup com os apps detectados no Mac">
+  <img src="docs/screenshot.png" width="640" alt="iMackPeek — aba Finder sincronizando via Google Drive">
 </p>
 
 ---
 
 ## 🧭 O problema
 
-O [Mackup](https://github.com/lra/mackup) é ótimo pra versionar as configurações dos seus apps (dotfiles, prefs, `.gitconfig`, settings do VS Code…) e sincronizá-las via iCloud, Dropbox ou disco. Mas é **CLI-only desde 2013** — a [issue pedindo uma GUI (#604)](https://github.com/lra/mackup/issues/604) está aberta sem implementação. Pra usar, você decora `mackup backup`, `mackup restore`, edita um `.mackup.cfg` na mão pra escolher o que sincronizar, e torce pra não estar mandando o `.ssh/` inteiro pra nuvem sem perceber.
+O macOS não sincroniza as preferências do Finder entre Macs. Cada máquina nova (ou formatada) começa com barra de caminho escondida, extensões ocultas, visualização em ícones, avisos ligados… e você refaz tudo à mão. Copiar o `com.apple.finder.plist` inteiro também não serve: ele carrega lixo da máquina de origem (histórico de pastas, caminhos `/Users/<você>/…`, posições de janelas e ícones, IDs de conta) que bagunça a outra máquina.
 
 ## ✨ A solução
 
-iMackPeek é um app de barra de menu que **envelopa o `mackup` instalado** e mostra, numa tela só, quais dos 600+ apps suportados realmente têm arquivos de config no seu Mac. Você marca o que quer, **pré-visualiza** (dry-run) e executa **backup** ou **restore** — tudo com checkbox e botão. Não é um fork nem reimplementação: por baixo é o `mackup` de verdade, com a saída dele lida e apresentada de forma legível.
-
-E o mais importante: **nunca toca no seu `~/.mackup.cfg`**. Cada ação gera um `.cfg` temporário e descartável, preservando qualquer configuração manual que você já tenha.
+iMackPeek é um app de barra de menus que lê **só as chaves portáveis** das preferências do Finder, grava num arquivo dentro da pasta do seu serviço de nuvem e, no outro Mac, aplica essas chaves e faz o Finder relê-las — inclusive as barras da janela aberta, que o macOS não recarrega sozinho.
 
 ## 🎯 Features
 
-- 🔍 **Detecção automática** — escaneia os 600+ apps suportados e separa "detectados no seu Mac" dos "suportados mas ausentes"
-- ✅ **Seleção por checkbox** — marque app por app o que entra no backup/restore, veja os arquivos de cada um antes
-- 👀 **Pré-visualização (dry-run)** — roda `mackup -n` e mostra exatamente o que aconteceria, sem mexer em nada
-- ⚠️ **Aviso de paths sensíveis** — badge amarelo em apps cujo backup inclui `.ssh/`, `.aws/`, `.gnupg/`, `.kube/`, credenciais etc., pra você não mandar segredo pra nuvem sem querer
-- ♻️ **Modo Restore** — lista o que está no storage (iCloud/Dropbox/disco), com data de cada backup, e restaura com um clique
-- 💾 **Perfis salvos** — guarde seleções nomeadas ("Setup dev", "Sistema apenas") e dispare backup/restore direto do menu
-- 🔄 **Reiniciar daemons pós-restore** — toggle pra dar `killall cfprefsd Finder Dock` e fazer o macOS reler as prefs restauradas
-- 📦 **Instalação assistida do Mackup** — se o `mackup` não estiver instalado, o app detecta e oferece instalar via Homebrew
-- 🪶 **Discreto** — vive só na barra de menu, sem ícone no Dock
+- ☁️ **Escolha o serviço de nuvem** — iCloud Drive, Google Drive ou OneDrive. O app detecta quais estão instalados no Mac (e cada conta do Google Drive/OneDrive vira uma opção)
+- ⬆️ **Salvar deste Mac** — captura cerca de 50 configurações do Finder e grava em `iMackPeek/finder-settings.plist` no serviço escolhido
+- ⬇️ **Aplicar neste Mac** — grava as configurações, reinicia Finder/WindowManager e aciona as barras (caminho, status, lateral, abas) na janela viva
+- ℹ️ **"O que é sincronizado?"** — informativo, por grupo, de tudo que viaja entre os Macs (e do que fica de fora de propósito)
+- 🗑️ **Excluir sincronização** — apaga o arquivo salvo na nuvem, com confirmação; não mexe nas configurações locais
+- 🪶 **Discreto** — vive na barra de menus; o ícone só aparece no Dock enquanto a janela está aberta
+- 🚀 **Iniciar com o macOS** — opcional, pelo menu da barra
+
+### O que é sincronizado
+
+| Grupo | Exemplos |
+|---|---|
+| Barras e visualização | estilo de visualização padrão; barras de caminho, status, lateral e abas; botões da barra de ferramentas |
+| Mesa | discos internos/externos, mídia removível e servidores na Mesa; ocultar ícones da Mesa; pastas no topo |
+| Janelas e navegação | pasta de nova janela, abrir em abas, pastas com mola e atraso |
+| Avançado | arquivos ocultos, todas as extensões, avisos (extensão, iCloud, lixo), lixo após 30 dias, escopo da busca |
+| Opções de visualização | tamanho de ícone, grade, colunas, agrupamento (Mesa, janelas, Lixo, Rede, iCloud, pacotes) |
+| Barra lateral e etiquetas | largura, seções abertas/fechadas, etiquetas favoritas e recentes |
+| Rede | servidores salvos e recentes em "Conectar ao servidor" |
+
+**Não viaja (de propósito):** histórico de pastas, posições de ícones e janelas, IDs de conta iCloud e flags de migração.
 
 ## 📦 Instalação
 
@@ -54,43 +64,48 @@ E o mais importante: **nunca toca no seu `~/.mackup.cfg`**. Cada ação gera um 
    xattr -dr com.apple.quarantine /Applications/iMackPeek.app
    ```
 
-> **Pré-requisito:** o iMackPeek envelopa o [Mackup](https://github.com/lra/mackup). Se ele não estiver instalado (`brew install mackup`), o app detecta e oferece instalar pra você.
-
-> **Acesso Total ao Disco:** o scan precisa ler as configs de outros apps em `~/Library/...`. Na primeira vez o macOS pede permissão. Pra parar de perguntar, conceda **Acesso Total ao Disco** ao iMackPeek em **Ajustes do Sistema → Privacidade e Segurança → Acesso Total ao Disco**.
+> **Permissões:** para o *Aplicar*, conceda ao iMackPeek **Acessibilidade** (acionar as barras de caminho, lateral e abas pelo menu do Finder) e **Acesso Total ao Disco**, em **Ajustes do Sistema → Privacidade e Segurança**. Ao usar Google Drive ou OneDrive pela primeira vez, o macOS pode pedir permissão para o app acessar a pasta do serviço.
 
 ## ⚙️ Como usar
 
-1. Clique no ícone da barra de menu e abra a janela
-2. Em **Backup**, o app lista os apps com config detectada — marque os que quer salvar (clique em "Ver arquivos" pra inspecionar cada um)
-3. Clique em **Pré-visualizar** pra ver o dry-run, depois em **Executar backup**
-4. Em **Restore**, o app lista o que já está no seu storage — marque e restaure (ligue o toggle de reiniciar daemons se mexeu em prefs do sistema)
-5. Salve uma seleção como **perfil** pra repetir depois com um clique
+1. Clique no ícone da barra de menus → **Abrir iMackPeek**
+2. Em **Sincronizar via**, escolha o serviço de nuvem — **o mesmo nos dois Macs**
+3. No Mac de origem, clique em **Salvar deste Mac**
+4. No Mac de destino, espere o serviço de nuvem baixar o arquivo e clique em **Aplicar neste Mac**
 
-> A barra superior mostra o **storage engine ativo** (iCloud, Dropbox, disco…), lido do seu `~/.mackup.cfg` real. O iMackPeek nunca reescreve esse arquivo — usa um `.cfg` temporário a cada ação.
+> A escolha do serviço é guardada em cada Mac. Se o serviço escolhido for desinstalado, o app **não troca sozinho** de serviço: avisa e grava só localmente até você escolher outro.
+
+### Onde o arquivo fica
+
+| Serviço | Pasta |
+|---|---|
+| iCloud Drive | `~/Library/Mobile Documents/com~apple~CloudDocs/iMackPeek/` |
+| Google Drive | `~/Library/CloudStorage/GoogleDrive-<conta>/Meu Drive/iMackPeek/` |
+| OneDrive | `~/Library/CloudStorage/OneDrive-<conta>/iMackPeek/` (ou `~/OneDrive/iMackPeek/` no cliente antigo) |
+| Nenhum disponível | `~/Library/Application Support/iMackPeek/` (local — não sincroniza) |
 
 ## 🧱 Arquitetura
 
 ```
 iMackPeek/
-├── App/                  # @main, AppDelegate (menu bar, agent policy), Info.plist
-├── Core/                 # Wrapper do mackup, parser, detecção de apps, config, perfis, storage
-├── UI/                   # Janela principal, modos Backup/Restore, Perfis, componentes
-├── Utilities/            # Shell, detecção do Homebrew, logger, launcher de terminal
-└── Resources/            # Assets (ícone) + known-sensitive-paths.json
+├── App/                  # @main (MenuBarExtra), AppDelegate, AppModel, WindowManager, Info.plist
+├── Core/                 # Nuvem, receita/captura/aplicação das prefs, AppleScript do Finder, Dock, login
+├── UI/                   # Janela principal (abas) e aba Finder, componentes
+├── Utilities/            # Shell (Process), logger
+└── Resources/            # Assets (ícone)
 ```
 
 | Componente | Responsabilidade |
 |---|---|
-| `MackupCLI` | Wrapper de `Process` pra chamar o binário `mackup` (`list`, `show`, `backup`, `restore`) com `-c <cfg>` e `-f`/`-n` |
-| `MackupParser` | Faz o parse da saída de `mackup list` (600+ slugs) e `mackup show <app>` (paths monitorados) |
-| `ApplicationDetector` | Cruza os paths de cada app com `FileManager` pra ver o que realmente existe no Mac |
-| `ConfigGenerator` | Gera o `.cfg` temporário em `~/.imackpeek-<UUID>.cfg` (precisa estar no home) e o remove após uso |
-| `StorageInspector` | Lê a pasta de storage (iCloud/Dropbox/disco) conforme o `[storage]` do `.mackup.cfg` pro modo restore |
-| `SensitivePathChecker` | Marca apps cujo backup toca paths de `known-sensitive-paths.json` |
-| `ProfileStore` | Persiste perfis nomeados em `~/Library/Application Support/iMackPeek/profiles/` |
-| `ShowCache` | Cacheia `mackup show` em `~/Library/Caches/iMackPeek/show-cache.json` (TTL 24h) pra acelerar o 2º scan |
-| `HomebrewDetector` | Localiza o `mackup` em `/opt/homebrew/bin`, `/usr/local/bin` ou `/usr/bin` |
+| `CloudStorage` | Detecta iCloud Drive / Google Drive / OneDrive, guarda a escolha do Mac e resolve a pasta de armazenamento |
+| `SystemPrefsCatalog` | Receita com as chaves portáveis do Finder (e o texto do informativo) |
+| `SystemPrefsSync` | Captura e aplica as chaves via `CFPreferences`; lê/grava/exclui o `finder-settings.plist` |
+| `FinderUIApplier` | AppleScript que aciona as barras na janela viva do Finder (System Events para caminho/lateral/abas) |
+| `FinderSyncViewModel` | Orquestra salvar, aplicar (incl. `killall` de `cfprefsd`, Finder e WindowManager) e excluir |
+| `WindowManager` / `DockPresence` | Janela criada sob demanda (início silencioso) e ícone no Dock só com a janela aberta |
 | `LaunchAtLogin` | Toggle de início automático via `SMAppService.mainApp` |
+
+O app é organizado em **abas de sincronização** (`AppMode`); a primeira é o Finder, e novas abas entram como novas receitas em `SystemPrefsCatalog`.
 
 ## 🔨 Build a partir do código
 
@@ -99,7 +114,6 @@ Requisitos:
 - Xcode 15+
 - Swift 5.0
 - [`xcodegen`](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`)
-- [`mackup`](https://github.com/lra/mackup) em runtime (`brew install mackup`)
 
 ```bash
 git clone https://github.com/fredwilliamtjr/iMackPeek.git
@@ -118,7 +132,7 @@ xcodebuild -project iMackPeek.xcodeproj -scheme iMackPeek -configuration Release
 ### Gerar um DMG distribuível
 
 ```bash
-./scripts/build_release.sh   # compila Release e copia pra dist/iMackPeek.app
+./scripts/build_release.sh   # compila Release universal e copia pra dist/iMackPeek.app
 ./scripts/create_dmg.sh      # monta dist/iMackPeek.dmg com layout "arraste pra Applications"
 ```
 
@@ -130,41 +144,38 @@ swift scripts/generate_icon.swift Resources/Assets.xcassets/AppIcon.appiconset/ 
 
 ## 🔒 Segurança / sandboxing
 
-- **App Sandbox**: desligado. Necessário pra invocar o binário `mackup` via `Process` — incompatível com o sandbox.
-- **Acesso a arquivos**: o iMackPeek só **lê** pra detectar config de apps e inspecionar o storage. As alterações de fato são feitas pelo `mackup`, não pelo app.
-- **Nunca escreve no seu `~/.mackup.cfg`** — sempre gera um `.cfg` temporário e descartável por ação.
-- **Aviso de paths sensíveis** — chama atenção quando um backup inclui credenciais (`.ssh/`, `.aws/`, etc.) antes de mandá-las pro storage.
+- **App Sandbox**: desligado. Necessário para aplicar preferências de outros domínios, rodar `killall`/`osascript` via `Process` e acionar o Finder por System Events.
+- **Sem servidor próprio**: o arquivo vai só para a pasta local do serviço de nuvem que você escolheu; quem sincroniza é o cliente do próprio serviço.
+- **Configurações locais protegidas**: *Excluir sincronização* remove só o arquivo salvo na nuvem.
 - **Assinatura**: ad-hoc por padrão. Pra distribuição sem fricção de Gatekeeper, precisaria de Developer ID + notarização da Apple.
 
 ## 🚫 Limitações conhecidas
 
-- **Só copy mode.** O link mode do Mackup está quebrado no Sonoma+; o iMackPeek usa exclusivamente copy mode (o default de `backup`/`restore`) e não expõe link mode na UI.
-- **iCloud Drive com placeholders.** Arquivos ainda não baixados aparecem como placeholder; pode ser necessário baixá-los antes de um restore completo.
-- **Não existe `mackup uninstall` em copy mode (0.10.3).** Pra "limpar" um backup, deleta-se a pasta do storage manualmente.
-- **A saída do `mackup` pode mudar entre versões.** O parser é tolerante, mas confia no `--help` da versão instalada, não na doc do master.
+- **Favoritos da barra lateral** ainda não são sincronizados (o macOS recente mudou onde guarda isso).
+- **Barras via menu do Finder:** o acionamento das barras de caminho, lateral e abas procura o menu **Visualizar** — pensado para o macOS em português.
+- **OneDrive** foi implementado pelos caminhos padrão do cliente, mas ainda não foi testado numa máquina real.
+- **Arquivo só na nuvem:** se o Google Drive/OneDrive estiver em modo *streaming* e o arquivo ainda não tiver sido baixado, o *Aplicar* pode demorar enquanto o cliente o baixa.
 
 ## 🗺️ Roadmap
 
-- [x] Wrapper do `mackup` (`list`/`show`/`backup`/`restore`) + parser tolerante
-- [x] Modo Backup com detecção de apps e dry-run
-- [x] Modo Restore lendo o storage
-- [x] Aviso de paths sensíveis
-- [x] Perfis salvos + atalhos no menu bar
-- [x] Cache de `mackup show`
-- [x] Instalação assistida do Mackup
-- [x] DMG distribuível
+- [x] Aba Finder: salvar/aplicar todas as configurações portáveis
+- [x] Barras aplicadas ao vivo (caminho, status, lateral, abas)
+- [x] Informativo "O que é sincronizado?" e excluir sincronização
+- [x] Escolha do serviço de nuvem (iCloud Drive, Google Drive, OneDrive)
+- [ ] Favoritos da barra lateral
+- [ ] Novas abas de sincronização (Dock, teclado, trackpad…)
 - [ ] Developer ID + notarização (distribuir sem aviso do Gatekeeper)
-- [ ] Botão "Limpar storage" com confirmação dupla
-- [ ] Diff entre o que está no Mac e o que está no backup
 - [ ] Localização em inglês
+
+> **Histórico:** até a v0.1.1 o iMackPeek era uma interface visual para o [Mackup](https://github.com/lra/mackup). A partir da v0.2.0 virou uma ferramenta própria, sem dependência do Mackup.
 
 ## 👨‍👩‍👧 Família Peek
 
-iMackPeek é o terceiro app da família **Peek** — utilitários de barra de menu que "espiam" partes do macOS que o sistema esconde:
+iMackPeek faz parte da família **Peek** — utilitários de barra de menu que "espiam" partes do macOS que o sistema esconde:
 
 - [**iCloudPeek**](https://github.com/fredwilliamtjr/iCloudPeek) — o que o iCloud Drive está subindo/baixando em tempo real
 - [**iNetPeek**](https://github.com/fredwilliamtjr/iNetPeek) — failover automático entre Ethernet e Wi-Fi
-- **iMackPeek** — backup/restore das configs dos seus apps via Mackup
+- **iMackPeek** — leva as configurações do Finder entre seus Macs
 
 ## 📄 Licença
 

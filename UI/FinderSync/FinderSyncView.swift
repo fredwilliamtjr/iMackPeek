@@ -16,6 +16,8 @@ struct FinderSyncView: View {
                     .foregroundStyle(.orange)
             }
 
+            servicePicker
+
             cloudStatus
 
             HStack(spacing: 14) {
@@ -69,6 +71,48 @@ struct FinderSyncView: View {
         }
     }
 
+    /// Seletor do serviço de nuvem usado por este Mac.
+    @ViewBuilder
+    private var servicePicker: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Text("Sincronizar via:").font(.callout)
+                if model.locations.isEmpty {
+                    Text("nenhum serviço encontrado").font(.callout).foregroundStyle(.secondary)
+                } else {
+                    Picker("Sincronizar via", selection: Binding(
+                        get: { model.selectedLocation?.id ?? "" },
+                        set: { model.select(locationID: $0) }
+                    )) {
+                        if model.selectedLocation == nil {
+                            Text("Escolha…").tag("")
+                        }
+                        ForEach(model.locations) { loc in
+                            Text(loc.displayName).tag(loc.id)
+                        }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                    .disabled(model.isRunning)
+                }
+                Spacer()
+                Button { model.configure() } label: { Image(systemName: "arrow.clockwise") }
+                    .buttonStyle(.borderless)
+                    .help("Procurar serviços de nuvem de novo")
+            }
+            if let warning = model.storageWarning {
+                Label(warning, systemImage: "exclamationmark.triangle")
+                    .font(.caption).foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Text(model.missingServices.isEmpty
+                 ? "Use o mesmo serviço nos dois Macs."
+                 : "Use o mesmo serviço nos dois Macs. Não instalado neste Mac: \(model.missingServices.map(\.displayName).joined(separator: ", ")).")
+                .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
     @ViewBuilder
     private var cloudStatus: some View {
         HStack(spacing: 8) {
@@ -97,7 +141,7 @@ struct FinderSyncView: View {
             Button("Excluir da nuvem", role: .destructive) { Task { await model.deleteSync() } }
             Button("Cancelar", role: .cancel) {}
         } message: {
-            Text("Remove o arquivo de configurações do Finder do iCloud. Suas configurações locais do Finder NÃO são alteradas — e você pode salvar de novo quando quiser.")
+            Text("Remove o arquivo de configurações do Finder de \(model.destinationName). Suas configurações locais do Finder NÃO são alteradas — e você pode salvar de novo quando quiser.")
         }
     }
 

@@ -149,8 +149,8 @@ struct SyncInfoGroup: Identifiable {
 /// `CFPreferences` preserva o tipo nativo de cada valor (bool, número, string,
 /// array, **dicionário** — caso das opções de visualização) e evita a armadilha
 /// do `cfprefsd`. O snapshot é serializado como um `.plist` único dentro da
-/// mesma raiz de nuvem que o app já usa (iCloud/Dropbox/…), então sincroniza
-/// junto.
+/// pasta do serviço de nuvem escolhido (iCloud Drive, Google Drive ou
+/// OneDrive — ver `CloudStorage`), então sincroniza junto.
 ///
 /// ⚠️ Importante: gravar via `CFPreferences` + reiniciar o Finder aplica a
 /// maioria das configs (Mesa, avisos, lateral, opções de visualização), mas
@@ -161,7 +161,7 @@ struct SystemPrefsSync {
 
     static let formatVersion = 1
 
-    /// Raiz do engine de storage (ex.: a pasta do iCloud Drive). O arquivo vai
+    /// Raiz do serviço de nuvem (ex.: a pasta do iCloud Drive). O arquivo vai
     /// para `iMackPeek/finder-settings.plist` dentro dela.
     let storageRoot: URL
 
