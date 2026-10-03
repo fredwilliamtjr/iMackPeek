@@ -17,7 +17,7 @@
 ---
 
 <p align="center">
-  <img src="docs/screenshot.png" width="640" alt="iMackPeek — aba Finder sincronizando via Google Drive">
+  <img src="docs/screenshot-v0.3.0.png" width="640" alt="iMackPeek — aba Finder sincronizando via Google Drive">
 </p>
 
 ---
