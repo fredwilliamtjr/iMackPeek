@@ -159,7 +159,11 @@ struct SyncInfoGroup: Identifiable {
 /// `FinderUIApplier`.
 struct SystemPrefsSync {
 
-    static let formatVersion = 1
+    /// Versão do formato do `finder-settings.plist`.
+    /// - 1: só as chaves com valor definido (`domains`).
+    /// - 2: também lista as chaves sem valor na origem (`unset`), para que o
+    ///   destino as apague e volte ao padrão do macOS.
+    static let formatVersion = 2
 
     /// Raiz do serviço de nuvem (ex.: a pasta do iCloud Drive). O arquivo vai
     /// para `iMackPeek/finder-settings.plist` dentro dela.
@@ -173,27 +177,46 @@ struct SystemPrefsSync {
 
     // MARK: - Captura (backup)
 
-    /// Lê do sistema os valores atuais das chaves da receita.
-    /// Retorna `domínio → (chave → valor)`, omitindo chaves sem valor definido.
-    func capture(_ recipe: SyncRecipe) -> [String: [String: Any]] {
-        var snapshot: [String: [String: Any]] = [:]
+    /// Estado das chaves da receita neste Mac.
+    struct Capture {
+        /// `domínio → (chave → valor)` das chaves com valor definido.
+        var domains: [String: [String: Any]] = [:]
+        /// `domínio → [chave]` das chaves sem valor definido — ou seja, no
+        /// padrão do macOS. Ex.: `AppleShowAllFiles` num Mac que nunca mostrou
+        /// arquivos ocultos.
+        var unset: [String: [String]] = [:]
+
+        var totalKeys: Int {
+            domains.values.reduce(0) { $0 + $1.count } + unset.values.reduce(0) { $0 + $1.count }
+        }
+    }
+
+    /// Lê do sistema os valores atuais das chaves da receita. Chave sem valor
+    /// também é registrada (em `unset`): sem isso, uma config ligada no destino
+    /// e no padrão (desligada) na origem nunca seria desfeita no Aplicar.
+    func capture(_ recipe: SyncRecipe) -> Capture {
+        var result = Capture()
         for pk in recipe.keys {
-            guard let value = CFPreferencesCopyValue(
+            if let value = CFPreferencesCopyValue(
                 pk.key as CFString, pk.domain as CFString,
                 kCFPreferencesCurrentUser, kCFPreferencesAnyHost
-            ) else { continue }
-            snapshot[pk.domain, default: [:]][pk.key] = value
+            ) {
+                result.domains[pk.domain, default: [:]][pk.key] = value
+            } else {
+                result.unset[pk.domain, default: []].append(pk.key)
+            }
         }
-        return snapshot
+        return result
     }
 
     @discardableResult
-    func save(_ snapshot: [String: [String: Any]], hostName: String, date: Date) throws -> URL {
+    func save(_ capture: Capture, hostName: String, date: Date) throws -> URL {
         let root: [String: Any] = [
             "version": Self.formatVersion,
             "savedAt": date,
             "savedBy": hostName,
-            "domains": snapshot,
+            "domains": capture.domains,
+            "unset": capture.unset,
         ]
         let data = try PropertyListSerialization.data(fromPropertyList: root, format: .xml, options: 0)
         try FileManager.default.createDirectory(
@@ -218,8 +241,15 @@ struct SystemPrefsSync {
         let savedAt: Date?
         let savedBy: String?
         let domains: [String: [String: Any]]
+        /// Chaves sem valor na origem (formato 2+). Vazio em snapshots v1.
+        let unset: [String: [String]]
 
-        var totalKeys: Int { domains.values.reduce(0) { $0 + $1.count } }
+        var totalKeys: Int {
+            domains.values.reduce(0) { $0 + $1.count } + unset.values.reduce(0) { $0 + $1.count }
+        }
+
+        /// Snapshot antigo (v1), que não registra as chaves no padrão.
+        var lacksUnsetKeys: Bool { version < 2 }
     }
 
     func load() throws -> SavedSnapshot? {
@@ -227,33 +257,53 @@ struct SystemPrefsSync {
         let data = try Data(contentsOf: fileURL)
         guard let root = try PropertyListSerialization.propertyList(from: data, options: [], format: nil)
                 as? [String: Any] else { return nil }
-        let domains = (root["domains"] as? [String: [String: Any]]) ?? [:]
         return SavedSnapshot(
             version: (root["version"] as? Int) ?? 0,
             savedAt: root["savedAt"] as? Date,
             savedBy: root["savedBy"] as? String,
-            domains: domains
+            domains: (root["domains"] as? [String: [String: Any]]) ?? [:],
+            unset: (root["unset"] as? [String: [String]]) ?? [:]
         )
     }
 
-    /// Grava no sistema os valores do snapshot, restritos às chaves da receita.
+    struct ApplyResult {
+        /// Chaves gravadas com o valor da origem.
+        let applied: Int
+        /// Chaves apagadas neste Mac (voltaram ao padrão, como na origem).
+        let reset: Int
+    }
+
+    /// Grava no sistema os valores do snapshot, restritos às chaves da receita,
+    /// e apaga as chaves que estavam sem valor na origem — assim este Mac fica
+    /// igual à origem também no que ela deixou no padrão. Chaves que o snapshot
+    /// não menciona (ex.: receita ganhou chave depois do Salvar) não são tocadas.
     /// Não reinicia daemons nem aciona o Finder — quem chama consolida isso.
-    /// Retorna o número de chaves aplicadas.
     @discardableResult
-    func apply(_ snapshot: SavedSnapshot, recipe: SyncRecipe) -> Int {
-        var count = 0
+    func apply(_ snapshot: SavedSnapshot, recipe: SyncRecipe) -> ApplyResult {
+        var applied = 0
+        var reset = 0
         var touchedDomains = Set<String>()
         for pk in recipe.keys {
-            guard let value = snapshot.domains[pk.domain]?[pk.key] else { continue }
-            CFPreferencesSetValue(
-                pk.key as CFString, value as CFPropertyList, pk.domain as CFString,
-                kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
-            touchedDomains.insert(pk.domain)
-            count += 1
+            if let value = snapshot.domains[pk.domain]?[pk.key] {
+                CFPreferencesSetValue(
+                    pk.key as CFString, value as CFPropertyList, pk.domain as CFString,
+                    kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+                touchedDomains.insert(pk.domain)
+                applied += 1
+            } else if snapshot.unset[pk.domain]?.contains(pk.key) == true,
+                      CFPreferencesCopyValue(
+                        pk.key as CFString, pk.domain as CFString,
+                        kCFPreferencesCurrentUser, kCFPreferencesAnyHost) != nil {
+                CFPreferencesSetValue(
+                    pk.key as CFString, nil, pk.domain as CFString,
+                    kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+                touchedDomains.insert(pk.domain)
+                reset += 1
+            }
         }
         for domain in touchedDomains {
             CFPreferencesAppSynchronize(domain as CFString)
         }
-        return count
+        return ApplyResult(applied: applied, reset: reset)
     }
 }

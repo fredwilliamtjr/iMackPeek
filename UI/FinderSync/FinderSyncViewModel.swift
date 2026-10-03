@@ -78,10 +78,10 @@ final class FinderSyncViewModel: ObservableObject {
     func save() async {
         guard let sync else { return }
         isRunning = true; defer { isRunning = false }
-        let snapshot = sync.capture(recipe)
-        let total = snapshot.values.reduce(0) { $0 + $1.count }
+        let captured = sync.capture(recipe)
+        let total = captured.totalKeys
         do {
-            let url = try sync.save(snapshot, hostName: hostName, date: Date())
+            let url = try sync.save(captured, hostName: hostName, date: Date())
             refreshCloudInfo()
             output = ActionOutput(
                 title: "Configurações do Finder salvas",
@@ -127,7 +127,7 @@ final class FinderSyncViewModel: ObservableObject {
         }
 
         // 1) grava todas as configs via CFPreferences
-        let applied = sync.apply(snap, recipe: recipe)
+        let result = sync.apply(snap, recipe: recipe)
 
         // 2) força os daemons a relerem (cfprefsd = cache; Finder e
         //    WindowManager = quem desenha janelas e a Mesa)
@@ -138,10 +138,19 @@ final class FinderSyncViewModel: ObservableObject {
         try? await Task.sleep(nanoseconds: 800_000_000)
 
         // 3) aplica as barras vivas via AppleScript
-        let desired = FinderUIApplier.desired(fromFinderDomain: snap.domains["com.apple.finder"])
+        let desired = FinderUIApplier.desired(
+            fromFinderDomain: snap.domains["com.apple.finder"],
+            unsetKeys: snap.unset["com.apple.finder"] ?? [])
         let uiResult = await FinderUIApplier.apply(desired)
 
-        var text = "\(applied) configurações aplicadas neste Mac (vindas de “\(snap.savedBy ?? "?")”).\nFinder reiniciado."
+        var text = "\(result.applied) configurações aplicadas neste Mac (vindas de “\(snap.savedBy ?? "?")”)."
+        if result.reset > 0 {
+            text += "\n\(result.reset) configurações voltaram ao padrão do macOS, como estão na origem."
+        }
+        text += "\nFinder reiniciado."
+        if snap.lacksUnsetKeys {
+            text += "\n\nAviso: este arquivo foi salvo por uma versão antiga do iMackPeek, que não registra as configurações deixadas no padrão (ex.: arquivos ocultos desligados). Clique em “Salvar” de novo em “\(snap.savedBy ?? "outro Mac")” para que elas também sejam aplicadas aqui."
+        }
         var ok = true
         switch uiResult {
         case .ok(let s):

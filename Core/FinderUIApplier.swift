@@ -22,14 +22,17 @@ enum FinderUIApplier {
     }
 
     /// Extrai os estados desejados do snapshot do domínio `com.apple.finder`.
-    static func desired(fromFinderDomain values: [String: Any]?) -> Desired {
-        func b(_ k: String) -> Bool? {
-            guard let n = values?[k] as? NSNumber else { return nil }
-            return n.boolValue
+    /// Chave sem valor na origem (`unsetKeys`) vira o padrão do macOS — senão
+    /// a barra ligada neste Mac continuaria aparecendo na janela aberta.
+    static func desired(fromFinderDomain values: [String: Any]?, unsetKeys: [String] = []) -> Desired {
+        func b(_ k: String, default def: Bool? = nil) -> Bool? {
+            if let n = values?[k] as? NSNumber { return n.boolValue }
+            return unsetKeys.contains(k) ? def : nil
         }
-        return Desired(pathbar: b("ShowPathbar"),
-                       statusbar: b("ShowStatusBar"),
-                       sidebar: b("ShowSidebar"),
+        return Desired(pathbar: b("ShowPathbar", default: false),
+                       statusbar: b("ShowStatusBar", default: false),
+                       sidebar: b("ShowSidebar", default: true),
+                       // padrão da barra de abas depende de quantas abas há
                        tabbar: b("NSWindowTabbingShoudShowTabBarKey-com.apple.finder.TBrowserWindow"))
     }
 
